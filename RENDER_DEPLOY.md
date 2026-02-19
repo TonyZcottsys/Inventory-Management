@@ -88,9 +88,9 @@ Use this if you prefer not to use the Blueprint or want to create services one b
    - **Region:** same as the database (e.g. Oregon)
    - **Runtime:** Node
    - **Build Command:**  
-     `npm install && npx prisma generate && npx prisma migrate deploy && npm run build`
+     `npm install && npx prisma generate && npm run build`
    - **Start Command:**  
-     `npm start`
+     `npx prisma migrate deploy && npm start`
    - **Instance type:** Free (or paid)
 
 ### Step 3: Environment variables
@@ -119,7 +119,7 @@ Save. Render will redeploy.
 
 - **Database:** In the Render dashboard, your PostgreSQL instance shows connection info, metrics, and backups (on paid plans).
 - **Logs:** Use the **Logs** tab on the Web Service for build and runtime logs.
-- **Migrations:** With the build command above, `prisma migrate deploy` runs on every deploy, so your DB schema stays in sync.
+- **Migrations:** The start command runs `prisma migrate deploy` before starting the app, so tables are created/updated on every deploy even if `DATABASE_URL` was not set at build time.
 
 ---
 
@@ -127,8 +127,8 @@ Save. Render will redeploy.
 
 | Issue | What to do |
 |-------|------------|
-| **500 on `/api/auth/register` or “database not functional”** | 1) Web Service → **Environment**: set `DATABASE_URL` to your Postgres **Internal Database URL**. 2) Ensure URL ends with `?sslmode=require`. 3) **Redeploy** so the build runs again and `prisma migrate deploy` creates tables. 4) Check **Logs** for the exact error. |
-| Build fails on `prisma migrate deploy` | Ensure `DATABASE_URL` is set **before** the build and uses the **Internal** URL. Check **Logs** for the exact error. |
+| **500 on `/api/auth/register` or “database not functional”** | Usually means the **User** table (and other tables) don’t exist. 1) Web Service → **Environment**: set `DATABASE_URL` to your Postgres **Internal Database URL** (with `?sslmode=require` if needed). 2) Set **Start Command** to `npx prisma migrate deploy && npm start` and **redeploy** so migrations run at startup and create tables. 3) Check **Logs** for the exact error. |
+| Build fails on `prisma migrate deploy` | Migrations now run at **start**, not build. Use build command `npm install && npx prisma generate && npm run build` and start command `npx prisma migrate deploy && npm start`. If you still run migrate in build, ensure `DATABASE_URL` is set before the build. |
 | “Application failed to respond” | Free tier spin-up can take 30–60 s after idle. Try again; check **Logs** for crashes. |
 | Login/API errors | Confirm `NEXT_PUBLIC_APP_URL` matches the app URL and `JWT_SECRET` is set. Seed users: run `npm run db:seed` locally with `DATABASE_URL` = Render **External** URL. |
 | DB connection errors | Use the **Internal Database URL** for the Web Service; use **External** only when running commands from your own machine (e.g. seed). |
