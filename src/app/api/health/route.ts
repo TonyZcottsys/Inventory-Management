@@ -18,11 +18,6 @@ export async function GET() {
 
   try {
     await prisma.$queryRaw`SELECT 1`;
-    return NextResponse.json({
-      ok: true,
-      database: "connected",
-      message: "App can connect to the database.",
-    });
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
     console.error("[GET /api/health] Database check failed:", e);
@@ -31,4 +26,23 @@ export async function GET() {
       { status: 503 }
     );
   }
+
+  // Verify migrations ran (User table exists)
+  let tablesOk = false;
+  try {
+    await prisma.user.findFirst({ take: 1 });
+    tablesOk = true;
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    console.error("[GET /api/health] User table check failed:", message);
+  }
+
+  return NextResponse.json({
+    ok: true,
+    database: "connected",
+    tables: tablesOk ? "ok" : "missing",
+    message: tablesOk
+      ? "App can connect to the database and tables exist."
+      : "Database connected but User table is missing. Redeploy so 'prisma migrate deploy' runs, or run migrations manually.",
+  });
 }

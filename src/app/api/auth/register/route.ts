@@ -37,6 +37,10 @@ export async function POST(req: NextRequest) {
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
     console.error("[POST /api/auth/register]", message, e);
+    // Missing table = migrations not run (common on first deploy)
+    if (typeof message === "string" && (message.includes("does not exist") || message.includes("relation"))) {
+      return apiError("Database not ready. Please try again in a minute or contact support.", 503);
+    }
     return apiError("Registration failed", 500);
   }
 }
