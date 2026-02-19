@@ -1,8 +1,8 @@
-# Render Blueprint - deploy database + web app from one place
-# Docs: https://render.com/docs/blueprint-spec
+# Render Blueprint - web app only (uses your existing free Postgres)
+# Render allows only ONE free database per account. Set DATABASE_URL in the Dashboard
+# to your existing free Postgres "Internal Database URL".
 
 services:
-  # Next.js web app
   - type: web
     name: stock-management-app
     runtime: node
@@ -12,20 +12,12 @@ services:
 
     envVars:
       - key: DATABASE_URL
-        fromDatabase:
-          name: inventory-db
-          property: connectionString
+        sync: false  # Paste your existing free Postgres "Internal Database URL" in Dashboard
       - key: NODE_ENV
         value: production
       - key: JWT_SECRET
         generateValue: true
       - key: NEXT_PUBLIC_APP_URL
-        sync: false  # Set in Dashboard to https://stock-management-app.onrender.com
+        sync: false
       - key: OPENAI_API_KEY
         sync: false
-
-# Render Postgres (managed PostgreSQL)
-databases:
-  - name: inventory-db
-    plan: free
-    region: oregon

@@ -21,9 +21,18 @@ Step-by-step guide to host your **PostgreSQL** database and **Next.js** app on [
 
 ---
 
+## One free database per account
+
+Render allows **only one free PostgreSQL database per account**. If you see “cannot have more than one active free tier database”, you already have a free DB. Use it for this app instead of creating another.
+
+- **Use your existing free database:** The current `render.yaml` deploys only the web app. You set **DATABASE_URL** in the Dashboard to your existing DB’s **Internal Database URL** (see Step 3 below).
+- **Or create a new free DB for this project:** Delete the other free database in the Render Dashboard, then you can use a blueprint that includes a `databases` section again.
+
+---
+
 ## Option A: Deploy with Blueprint (recommended)
 
-One deploy creates both the database and the web app and links them.
+The blueprint deploys the **web app only** and expects you to use an existing Postgres DB (because of the one-free-DB limit).
 
 ### Step 1: Create a new Blueprint
 
@@ -31,24 +40,22 @@ One deploy creates both the database and the web app and links them.
 2. Click **New** → **Blueprint**.
 3. Connect your **GitHub** or **GitLab** account if you haven’t already.
 4. Select the repository that contains this project.
-5. Render will detect `render.yaml` in the repo. Click **Apply**.
+5. Render will detect `render.yaml`. Click **Apply**.
 
 ### Step 2: Configure the Blueprint
 
-1. Render will show:
-   - **inventory-db** (PostgreSQL, under Databases)
-   - **stock-management-app** (Web Service)
-2. Leave defaults or change **region** if you want (e.g. Oregon).
-3. Click **Apply** to create both services.
+1. Render will show **stock-management-app** (Web Service) only.
+2. When prompted for **DATABASE_URL**, paste your existing free Postgres **Internal Database URL** (Dashboard → your PostgreSQL instance → **Info** / **Connect** → **Internal Database URL**). Or leave it blank and set it in Step 3.
+3. Click **Apply** to create the service.
 
 ### Step 3: Set environment variables after first deploy
 
-1. When the first deploy finishes, open **stock-management-app** → **Environment**.
+1. Open **stock-management-app** → **Environment**.
 2. Set:
-   - **NEXT_PUBLIC_APP_URL** = `https://stock-management-app.onrender.com`  
-     (or the URL Render shows for your app, e.g. `https://your-app-name.onrender.com`).
+   - **DATABASE_URL** = your existing free Postgres **Internal Database URL** (if not set in Step 2).
+   - **NEXT_PUBLIC_APP_URL** = `https://stock-management-app.onrender.com` (or the URL Render shows for your app).
    - **OPENAI_API_KEY** = your OpenAI key (if you use AI features).
-3. (Optional) Replace **JWT_SECRET** with your own long random string instead of the auto-generated one.
+3. (Optional) Replace **JWT_SECRET** with your own long random string.
 4. Save. Render will redeploy with the new variables.
 
 ### Step 4: Open the app
