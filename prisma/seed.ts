@@ -1,43 +1,44 @@
 import { PrismaClient } from "@prisma/client";
 import * as bcrypt from "bcryptjs";
+import { randomUUID } from "crypto";
 
 const prisma = new PrismaClient();
+
+// Raw upsert into inventory."User" with explicit inventory."Role" cast (avoids public."Role" in shared DB).
+async function upsertUser(
+  email: string,
+  password: string,
+  name: string,
+  role: "ADMIN" | "MANAGER" | "STAFF"
+) {
+  const id = randomUUID();
+  const now = new Date();
+  await prisma.$executeRawUnsafe(
+    `INSERT INTO inventory."User" (id, email, password, name, role, "createdAt", "updatedAt")
+     VALUES ($1, $2, $3, $4, $5::inventory."Role", $6, $7)
+     ON CONFLICT (email) DO UPDATE SET
+       password = EXCLUDED.password,
+       name = EXCLUDED.name,
+       role = EXCLUDED.role,
+       "updatedAt" = EXCLUDED."updatedAt"`,
+    id,
+    email,
+    password,
+    name,
+    role,
+    now,
+    now
+  );
+}
 
 async function main() {
   const adminPassword = await bcrypt.hash("admin123", 12);
   const managerPassword = await bcrypt.hash("manager123", 12);
   const staffPassword = await bcrypt.hash("staff123", 12);
 
-  const admin = await prisma.user.upsert({
-    where: { email: "admin@example.com" },
-    update: {},
-    create: {
-      email: "admin@example.com",
-      password: adminPassword,
-      name: "Admin User",
-      role: "ADMIN",
-    },
-  });
-  const manager = await prisma.user.upsert({
-    where: { email: "manager@example.com" },
-    update: {},
-    create: {
-      email: "manager@example.com",
-      password: managerPassword,
-      name: "Manager User",
-      role: "MANAGER",
-    },
-  });
-  const staff = await prisma.user.upsert({
-    where: { email: "staff@example.com" },
-    update: {},
-    create: {
-      email: "staff@example.com",
-      password: staffPassword,
-      name: "Staff User",
-      role: "STAFF",
-    },
-  });
+  await upsertUser("admin@example.com", adminPassword, "Admin User", "ADMIN");
+  await upsertUser("manager@example.com", managerPassword, "Manager User", "MANAGER");
+  await upsertUser("staff@example.com", staffPassword, "Staff User", "STAFF");
 
   const categories = ["Electronics", "Office Supplies", "Furniture", "Cleaning"];
   const suppliers = ["Acme Corp", "Global Supplies", "Office Depot"];
@@ -57,8 +58,9 @@ async function main() {
     "Tissue Box",
   ];
 
-  await prisma.activityLog.deleteMany({});
-  await prisma.inventoryItem.deleteMany({});
+  // Use raw SQL so we always target inventory schema (client may resolve to public in shared DB).
+  await prisma.$executeRawUnsafe('DELETE FROM inventory."ActivityLog"');
+  await prisma.$executeRawUnsafe('DELETE FROM inventory."InventoryItem"');
 
   for (let i = 0; i < names.length; i++) {
     const name = names[i];
@@ -67,18 +69,25 @@ async function main() {
     const reorderLevel = Math.floor(Math.random() * 20) + 5;
     const status =
       quantity <= reorderLevel ? "LOW_STOCK" : quantity <= reorderLevel * 1.5 ? "LOW_STOCK" : "IN_STOCK";
-    await prisma.inventoryItem.create({
-      data: {
-        name,
-        description: `Quality ${name.toLowerCase()} for office use.`,
-        quantity,
-        category,
-        price: Math.round((Math.random() * 100 + 10) * 100) / 100,
-        supplier: suppliers[i % suppliers.length],
-        reorderLevel,
-        status,
-      },
-    });
+    const description = `Quality ${name.toLowerCase()} for office use.`;
+    const price = Math.round((Math.random() * 100 + 10) * 100) / 100;
+    const supplier = suppliers[i % suppliers.length];
+    const now = new Date();
+    await prisma.$executeRawUnsafe(
+      `INSERT INTO inventory."InventoryItem" (id, name, description, quantity, category, price, supplier, "reorderLevel", status, "createdAt", "updatedAt")
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::inventory."InventoryStatus", $10, $11)`,
+      randomUUID(),
+      name,
+      description,
+      quantity,
+      category,
+      price,
+      supplier,
+      reorderLevel,
+      status,
+      now,
+      now
+    );
   }
 
   console.log("Seed complete. Users: admin@example.com / admin123, manager@example.com / manager123, staff@example.com / staff123");
