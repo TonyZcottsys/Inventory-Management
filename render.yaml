@@ -2,20 +2,11 @@
 # Docs: https://render.com/docs/blueprint-spec
 
 services:
-  # PostgreSQL database
-  - type: pserv
-    name: inventory-db
-    plan: free
-    region: oregon
-    ipAllowList: []  # empty = allow all (needed for Render web service to connect)
-
   # Next.js web app
   - type: web
     name: stock-management-app
     runtime: node
     region: oregon
-
-    # Connect to GitHub/GitLab repo in Render dashboard first, then this file is used
     buildCommand: npm install && npx prisma generate && npx prisma migrate deploy && npm run build
     startCommand: npm start
 
@@ -27,8 +18,14 @@ services:
       - key: NODE_ENV
         value: production
       - key: JWT_SECRET
-        generateValue: true  # Render generates a secure secret; set your own in Dashboard if preferred
+        generateValue: true
       - key: NEXT_PUBLIC_APP_URL
-        sync: false  # Set manually in Dashboard to your app URL, e.g. https://stock-management-app.onrender.com
+        sync: false  # Set in Dashboard to https://stock-management-app.onrender.com
       - key: OPENAI_API_KEY
-        sync: false  # Set in Dashboard if you use AI features
+        sync: false
+
+# Render Postgres (managed PostgreSQL)
+databases:
+  - name: inventory-db
+    plan: free
+    region: oregon

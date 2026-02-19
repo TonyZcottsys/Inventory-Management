@@ -36,7 +36,7 @@ One deploy creates both the database and the web app and links them.
 ### Step 2: Configure the Blueprint
 
 1. Render will show:
-   - **inventory-db** (PostgreSQL)
+   - **inventory-db** (PostgreSQL, under Databases)
    - **stock-management-app** (Web Service)
 2. Leave defaults or change **region** if you want (e.g. Oregon).
 3. Click **Apply** to create both services.
@@ -64,7 +64,7 @@ Use this if you prefer not to use the Blueprint or want to create services one b
 
 ### Step 1: Create PostgreSQL database
 
-1. Dashboard → **New** → **PostgreSQL**.
+1. In the Render Dashboard go to **New** → **PostgreSQL**.
 2. Name: `inventory-db`.
 3. Region: e.g. **Oregon** (use the same region for the web app later).
 4. Plan: **Free** (or paid if you prefer).
