@@ -7,51 +7,62 @@ import { logActivity } from "@/lib/activity";
 import { apiSuccess, apiError, apiUnauthorized } from "@/lib/api-response";
 import { InventoryStatus } from "@prisma/client";
 
+const ALLOWED_SORT_FIELDS = ["createdAt", "name", "quantity", "category", "status", "price"] as const;
+
 export async function GET(req: NextRequest) {
-  const session = await getSession();
-  if (!session) return apiUnauthorized();
+  try {
+    const session = await getSession();
+    if (!session) return apiUnauthorized();
 
-  const { searchParams } = new URL(req.url);
-  const search = searchParams.get("search") ?? "";
-  const category = searchParams.get("category") ?? "";
-  const status = searchParams.get("status") ?? "";
-  const minQty = searchParams.get("minQty");
-  const maxQty = searchParams.get("maxQty");
-  const sortBy = searchParams.get("sortBy") ?? "createdAt";
-  const sortOrder = searchParams.get("sortOrder") ?? "desc";
-  const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
-  const limit = Math.min(50, Math.max(1, parseInt(searchParams.get("limit") ?? "10", 10)));
-  const skip = (page - 1) * limit;
+    const { searchParams } = new URL(req.url);
+    const search = searchParams.get("search") ?? "";
+    const category = searchParams.get("category") ?? "";
+    const status = searchParams.get("status") ?? "";
+    const minQty = searchParams.get("minQty");
+    const maxQty = searchParams.get("maxQty");
+    const sortByRaw = searchParams.get("sortBy") ?? "createdAt";
+    const sortBy = ALLOWED_SORT_FIELDS.includes(sortByRaw as (typeof ALLOWED_SORT_FIELDS)[number])
+      ? sortByRaw
+      : "createdAt";
+    const sortOrder = (searchParams.get("sortOrder") ?? "desc") as "asc" | "desc";
+    const sortOrderSafe = sortOrder === "asc" || sortOrder === "desc" ? sortOrder : "desc";
+    const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
+    const limit = Math.min(50, Math.max(1, parseInt(searchParams.get("limit") ?? "10", 10)));
+    const skip = (page - 1) * limit;
 
-  const where: { name?: { contains: string; mode: "insensitive" }; category?: string; status?: InventoryStatus; quantity?: { gte?: number; lte?: number } } = {};
-  if (search) where.name = { contains: search, mode: "insensitive" };
-  if (category) where.category = category;
-  if (status) where.status = status as InventoryStatus;
-  if (minQty != null && minQty !== "") {
-    where.quantity = where.quantity ?? {}; where.quantity.gte = parseInt(minQty, 10);
+    const where: { name?: { contains: string; mode: "insensitive" }; category?: string; status?: InventoryStatus; quantity?: { gte?: number; lte?: number } } = {};
+    if (search) where.name = { contains: search, mode: "insensitive" };
+    if (category) where.category = category;
+    if (status) where.status = status as InventoryStatus;
+    if (minQty != null && minQty !== "") {
+      where.quantity = where.quantity ?? {}; where.quantity.gte = parseInt(minQty, 10);
+    }
+    if (maxQty != null && maxQty !== "") {
+      where.quantity = where.quantity ?? {}; where.quantity.lte = parseInt(maxQty, 10);
+    }
+
+    const orderBy = { [sortBy]: sortOrderSafe };
+    const [items, total] = await Promise.all([
+      prisma.inventoryItem.findMany({
+        where,
+        orderBy,
+        skip,
+        take: limit,
+      }),
+      prisma.inventoryItem.count({ where }),
+    ]);
+
+    return apiSuccess({
+      items: items.map((i) => ({
+        ...i,
+        price: i.price ? Number(i.price) : null,
+      })),
+      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+    });
+  } catch (e) {
+    console.error("[GET /api/inventory]", e);
+    return apiError("Failed to load inventory", 500);
   }
-  if (maxQty != null && maxQty !== "") {
-    where.quantity = where.quantity ?? {}; where.quantity.lte = parseInt(maxQty, 10);
-  }
-
-  const orderBy = { [sortBy]: sortOrder as "asc" | "desc" };
-  const [items, total] = await Promise.all([
-    prisma.inventoryItem.findMany({
-      where,
-      orderBy,
-      skip,
-      take: limit,
-    }),
-    prisma.inventoryItem.count({ where }),
-  ]);
-
-  return apiSuccess({
-    items: items.map((i) => ({
-      ...i,
-      price: i.price ? Number(i.price) : null,
-    })),
-    pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
-  });
 }
 
 export async function POST(req: NextRequest) {
