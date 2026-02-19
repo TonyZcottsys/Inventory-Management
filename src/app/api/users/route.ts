@@ -7,14 +7,19 @@ import { logActivity } from "@/lib/activity";
 import { apiSuccess, apiError, apiUnauthorized, apiForbidden } from "@/lib/api-response";
 
 export async function GET() {
-  const session = await getSession();
-  if (!session) return apiUnauthorized();
-  if (!canManageUsers(session)) return apiForbidden();
-  const users = await prisma.user.findMany({
-    select: { id: true, email: true, name: true, role: true, createdAt: true },
-    orderBy: { createdAt: "desc" },
-  });
-  return apiSuccess({ users });
+  try {
+    const session = await getSession();
+    if (!session) return apiUnauthorized();
+    if (!canManageUsers(session)) return apiForbidden();
+    const users = await prisma.user.findMany({
+      select: { id: true, email: true, name: true, role: true, createdAt: true },
+      orderBy: { createdAt: "desc" },
+    });
+    return apiSuccess({ users });
+  } catch (e) {
+    console.error("[GET /api/users]", e);
+    return apiError("Failed to load users", 500);
+  }
 }
 
 export async function POST(req: NextRequest) {

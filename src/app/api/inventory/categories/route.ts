@@ -1,15 +1,21 @@
 import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/auth";
-import { apiSuccess, apiUnauthorized } from "@/lib/api-response";
+import { apiSuccess, apiUnauthorized, apiError } from "@/lib/api-response";
 
 export async function GET() {
-  const session = await getSession();
-  if (!session) return apiUnauthorized();
-  const items = await prisma.inventoryItem.findMany({
-    where: { category: { not: null } },
-    select: { category: true },
-    distinct: ["category"],
-  });
-  const categories = items.map((i) => i.category).filter(Boolean) as string[];
-  return apiSuccess({ categories });
+  try {
+    const session = await getSession();
+    if (!session) return apiUnauthorized();
+
+    const result = await prisma.inventoryItem.groupBy({
+      by: ["category"],
+      where: { category: { not: null } },
+      _count: { id: true },
+    });
+    const categories = result.map((r) => r.category).filter(Boolean) as string[];
+    return apiSuccess({ categories });
+  } catch (e) {
+    console.error("[GET /api/inventory/categories]", e);
+    return apiError("Failed to load categories", 500);
+  }
 }
