@@ -26,7 +26,8 @@ const defaultForm: InventoryItemForm = {
 };
 
 interface InventoryFormProps {
-  initial?: Partial<InventoryItemForm> | null;
+  /** When editing, pass form fields + id for the update URL */
+  initial?: (Partial<InventoryItemForm> & { id?: string }) | null;
   onSuccess: () => void;
   onCancel: () => void;
   generateDescription?: (name: string, category?: string) => Promise<string>;
@@ -40,16 +41,20 @@ export function InventoryForm({
   generateDescription,
   canEditStatus = true,
 }: InventoryFormProps) {
-  const [form, setForm] = useState<InventoryItemForm>(() => ({
-    ...defaultForm,
-    ...(initial || {}),
-  }));
+  const [form, setForm] = useState<InventoryItemForm>(() => {
+    if (!initial) return { ...defaultForm };
+    const { id: _id, ...rest } = initial;
+    return { ...defaultForm, ...rest };
+  });
   const [loading, setLoading] = useState(false);
   const [genLoading, setGenLoading] = useState(false);
   const { addToast } = useToast();
 
   useEffect(() => {
-    if (initial) setForm((f) => ({ ...defaultForm, ...f, ...initial }));
+    if (initial) {
+      const { id: _id, ...rest } = initial;
+      setForm((f) => ({ ...defaultForm, ...f, ...rest }));
+    }
   }, [initial]);
 
   async function handleGenerateDesc() {
@@ -86,7 +91,7 @@ export function InventoryForm({
     }
     setLoading(true);
     try {
-      const url = initial ? `/api/inventory/${(initial as { id?: string }).id}` : "/api/inventory";
+      const url = initial?.id ? `/api/inventory/${initial.id}` : "/api/inventory";
       const method = initial ? "PUT" : "POST";
       const body: Record<string, unknown> = {
         name,
