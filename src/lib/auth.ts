@@ -44,10 +44,14 @@ export async function verifyToken(token: string): Promise<JWTPayload | null> {
 }
 
 export async function getSession(): Promise<JWTPayload | null> {
-  const cookieStore = await cookies();
-  const token = cookieStore.get(COOKIE_NAME)?.value;
-  if (!token) return null;
-  return verifyToken(token);
+  try {
+    const cookieStore = await cookies();
+    const token = cookieStore.get(COOKIE_NAME)?.value;
+    if (!token) return null;
+    return await verifyToken(token);
+  } catch {
+    return null;
+  }
 }
 
 export async function setSessionCookie(token: string) {

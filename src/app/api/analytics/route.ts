@@ -32,14 +32,14 @@ export async function GET() {
     }
 
     const [byStatus, byCategory] = await Promise.all([
-      prisma.inventoryItem.groupBy({ by: ["status"], _count: true }),
-      prisma.inventoryItem.groupBy({ by: ["category"], _count: true, where: { category: { not: null } } }),
+      prisma.inventoryItem.groupBy({ by: ["status"], _count: { id: true } }),
+      prisma.inventoryItem.groupBy({ by: ["category"], _count: { id: true }, where: { category: { not: null } } }),
     ]);
 
     return apiSuccess({
       ...basic,
-      byStatus: byStatus.map((s) => ({ status: s.status, count: s._count })),
-      byCategory: byCategory.map((c) => ({ category: c.category || "Uncategorized", count: c._count })),
+      byStatus: byStatus.map((s) => ({ status: s.status, count: s._count.id })),
+      byCategory: byCategory.map((c) => ({ category: c.category || "Uncategorized", count: c._count.id })),
     });
   } catch (e) {
     console.error("[GET /api/analytics]", e);
