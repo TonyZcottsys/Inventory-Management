@@ -1,0 +1,60 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  MANAGER
+  STAFF
+}
+
+enum InventoryStatus {
+  IN_STOCK
+  LOW_STOCK
+  ORDERED
+  DISCONTINUED
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  name      String?
+  role      Role     @default(STAFF)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  activityLogs ActivityLog[]
+}
+
+model InventoryItem {
+  id           String          @id @default(uuid())
+  name         String
+  description  String?
+  quantity     Int
+  category     String?
+  price        Decimal?        @db.Decimal(12, 2)
+  supplier     String?
+  reorderLevel Int             @default(0)
+  status       InventoryStatus @default(IN_STOCK)
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  activityLogs ActivityLog[]
+}
+
+model ActivityLog {
+  id        String        @id @default(uuid())
+  action    String
+  entity    String
+  entityId  String?
+  details   String?
+  userId    String?
+  user      User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  itemId    String?
+  item      InventoryItem? @relation(fields: [itemId], references: [id], onDelete: SetNull)
+  createdAt DateTime      @default(now())
+}
