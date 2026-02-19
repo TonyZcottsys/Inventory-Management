@@ -22,16 +22,21 @@ export async function POST(req: NextRequest) {
     });
     const token = await createToken({ sub: user.id, email: user.email, role: user.role });
     await setSessionCookie(token);
-    await logActivity({
-      action: "REGISTER",
-      entity: "User",
-      entityId: user.id,
-      details: `New user: ${user.email}`,
-      userId: user.id,
-    });
+    try {
+      await logActivity({
+        action: "REGISTER",
+        entity: "User",
+        entityId: user.id,
+        details: `New user: ${user.email}`,
+        userId: user.id,
+      });
+    } catch (activityErr) {
+      console.error("[POST /api/auth/register] logActivity failed:", activityErr);
+    }
     return apiSuccess({ user });
   } catch (e) {
-    console.error(e);
+    const message = e instanceof Error ? e.message : String(e);
+    console.error("[POST /api/auth/register]", message, e);
     return apiError("Registration failed", 500);
   }
 }
