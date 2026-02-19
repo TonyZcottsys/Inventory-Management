@@ -127,10 +127,11 @@ Save. Render will redeploy.
 
 | Issue | What to do |
 |-------|------------|
-| Build fails on `prisma migrate deploy` | Ensure `DATABASE_URL` is set and uses the **Internal** URL. Check **Logs** for the exact error. |
+| **500 on `/api/auth/register` or “database not functional”** | 1) Web Service → **Environment**: set `DATABASE_URL` to your Postgres **Internal Database URL**. 2) Ensure URL ends with `?sslmode=require`. 3) **Redeploy** so the build runs again and `prisma migrate deploy` creates tables. 4) Check **Logs** for the exact error. |
+| Build fails on `prisma migrate deploy` | Ensure `DATABASE_URL` is set **before** the build and uses the **Internal** URL. Check **Logs** for the exact error. |
 | “Application failed to respond” | Free tier spin-up can take 30–60 s after idle. Try again; check **Logs** for crashes. |
-| Login/API errors | Confirm `NEXT_PUBLIC_APP_URL` matches the app URL and `JWT_SECRET` is set. |
-| DB connection errors | Use the **Internal Database URL** for `DATABASE_URL`, not the external one (unless you’re connecting from outside Render). |
+| Login/API errors | Confirm `NEXT_PUBLIC_APP_URL` matches the app URL and `JWT_SECRET` is set. Seed users: run `npm run db:seed` locally with `DATABASE_URL` = Render **External** URL. |
+| DB connection errors | Use the **Internal Database URL** for the Web Service; use **External** only when running commands from your own machine (e.g. seed). |
 
 ---
 
